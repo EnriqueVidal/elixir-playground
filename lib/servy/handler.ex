@@ -1,10 +1,11 @@
 defmodule Servy.Handler do
    def handle(request) do
     request 
-    |> parse 
+    |> parse
     |> rewrite_path
     |> route
     |> track
+    |> emojify
     |> format_response
    end 
 
@@ -30,15 +31,23 @@ defmodule Servy.Handler do
 
    def track(conv), do: conv
 
-   def rewrite_path(%{path: "/wildlife"} = conv) do
-       %{ conv | path: "/wildthings" }
+   def rewrite_path(%{ path: path } = conv) do
+       ~r{\/(?<thing>\w+)\?id=(?<id>\d+)}
+       |> Regex.named_captures(path)
+       |> rewrite_path_captures(conv)
    end
 
-   def rewrite_path(%{path: "/bears?id=" <> id} = conv) do
-       %{ conv | path: "/bears/#{id}" }
+   def rewrite_path(%{path: "/wildlife"} = conv) do
+    %{ conv | path: "/wildthings" }
+    end
+
+    def rewrite_path(conv), do: conv 
+
+   defp rewrite_path_captures(%{"id" => id, "thing" => thing} = captures, conv) do
+    %{ conv | path: "/#{thing}/#{id}" }       
    end
-   
-   def rewrite_path(conv), do: conv 
+
+   defp rewrite_path_captures(nil, conv), do: conv
 
    def route(%{method: "GET", path: "/wildthings"} = conv) do
     %{ conv | status: 200, resp_body: "Bears, Lions, Tigers" }
@@ -70,6 +79,12 @@ defmodule Servy.Handler do
            500 => "Internal Server Error"
        }[code]
    end
+
+   def emojify(%{status: 200, resp_body: resp_body} = conv) do
+    %{ conv | resp_body: ";) #{resp_body} :)"}
+   end
+
+   def emojify(conv), do: conv
 
    def format_response(conv) do
     """
