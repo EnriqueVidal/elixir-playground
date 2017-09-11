@@ -16,57 +16,57 @@ defmodule Servy.Handler do
         |> track
         |> format_response
     end
+    
+    defp page(filename) do
+        @pages_path
+        |> Path.join(filename <> ".html")
+        |> File.read
+    end
 
-   defp page(filename) do
-    @pages_path
-    |> Path.join(filename <> ".html")
-    |> File.read
-   end
+    def route(%Conv{method: "GET", path: "/about"} = conv) do
+        page("about")
+        |> handle_file(conv)
+    end
 
-   def route(%Conv{method: "GET", path: "/about"} = conv) do
-    page("about")
-    |> handle_file(conv)
-   end
+    def route(%Conv{method: "GET", path: "/bears/new"} = conv) do
+        page("form")
+        |> handle_file(conv)
+    end
 
-   def route(%Conv{method: "GET", path: "/bears/new"} = conv) do
-    page("form")
-    |> handle_file(conv)
-   end
+    def route(%Conv{method: "GET", path: "/pages/" <> file} = conv) do
+        page(file)
+        |> handle_file(conv)
+    end
 
-   def route(%Conv{method: "GET", path: "/pages/" <> file} = conv) do
-    page(file)
-    |> handle_file(conv)
-   end
+    def route(%Conv{method: "GET", path: "/wildthings"} = conv) do
+        %{ conv | status: 200, resp_body: "Bears, Lions, Tigers" }
+    end
 
-   def route(%Conv{method: "GET", path: "/wildthings"} = conv) do
-    %{ conv | status: 200, resp_body: "Bears, Lions, Tigers" }
-   end
+    def route(%Conv{method: "GET", path: "/bears"} = conv) do
+        %{ conv | status: 200, resp_body: "Teddy, Smokey, Paddington" }
+    end
 
-   def route(%Conv{method: "GET", path: "/bears"} = conv) do
-    %{ conv | status: 200, resp_body: "Teddy, Smokey, Paddington" }
-   end
+    def route(%Conv{method: "GET", path: "/bears/" <> id} = conv) do
+        %{ conv | status: 200, resp_body: "Bear #{id}" }
+    end
 
-   def route(%Conv{method: "GET", path: "/bears/" <> id} = conv) do
-    %{ conv | status: 200, resp_body: "Bear #{id}" }
-   end
+    def route(%Conv{method: "DELETE", path: "/bears/" <> _id} = conv) do
+        %{ conv | status: 403, resp_body: "Deleting a bear is forbidden" }
+    end
 
-   def route(%Conv{method: "DELETE", path: "/bears/" <> _id} = conv) do
-    %{ conv | status: 403, resp_body: "Deleting a bear is forbidden" }
-   end
+    def route(%Conv{method: _method, path: path} = conv) do
+        %{ conv | status: 404, resp_body: "No #{path} here!"}
+    end
 
-   def route(%Conv{method: _method, path: path} = conv) do
-    %{ conv | status: 404, resp_body: "No #{path} here!"}
-   end
+    def format_response(%Conv{} = conv) do
+        """
+        HTTP/1.1 #{full_status(conv)}
+        Content-Type: text/html
+        Content-Length: #{byte_size conv.resp_body}
 
-   def format_response(%Conv{} = conv) do
-    """
-    HTTP/1.1 #{full_status(conv)}
-    Content-Type: text/html
-    Content-Length: #{byte_size conv.resp_body}
-
-    #{conv.resp_body}
-    """
-   end
+        #{conv.resp_body}
+        """
+    end
 end
 
 request = """

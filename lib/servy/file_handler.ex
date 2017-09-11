@@ -1,8 +1,6 @@
 defmodule Servy.FileHandler do
     alias Servy.Conv
 
-    @pages_path Path.expand("../../pages", __DIR__)
-
     def handle_file({:ok, content}, %Conv{} = conv) do
         %{ conv | status: 200, resp_body: content }
     end
