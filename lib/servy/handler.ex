@@ -1,94 +1,66 @@
 defmodule Servy.Handler do
-   def handle(request) do
-    request 
-    |> parse
-    |> rewrite_path
-    |> route
-    |> track
-    |> emojify
-    |> format_response
-   end 
+    import Servy.Conv, only: [full_status: 1]
+    import Servy.FileHandler, only: [handle_file: 2]
+    import Servy.Parser, only: [parse: 1]
+    import Servy.Plugins, only: [rewrite_path: 1, track: 1]
 
-   def parse(request) do
-    [method, path, _] = 
-        request 
-        |> String.split("\n") 
-        |> List.first
-        |> String.split
-    
-    %{ 
-        method: method, 
-        path: path, 
-        resp_body: "",
-        status: nil
-    }
-   end
+    alias Servy.Conv
 
-   def track(%{status: 404, path: path} = conv) do
-    IO.puts "Warning: #{path} is on the loose!"
-    conv
-   end
+    @pages_path Path.expand("../../pages", __DIR__)
 
-   def track(conv), do: conv
-
-   def rewrite_path(%{ path: path } = conv) do
-       ~r{\/(?<thing>\w+)\?id=(?<id>\d+)}
-       |> Regex.named_captures(path)
-       |> rewrite_path_captures(conv)
-   end
-
-   def rewrite_path(%{path: "/wildlife"} = conv) do
-    %{ conv | path: "/wildthings" }
+    def handle(request) do
+        request
+        |> parse
+        |> rewrite_path
+        |> route
+        |> track
+        |> format_response
     end
 
-    def rewrite_path(conv), do: conv 
-
-   defp rewrite_path_captures(%{"id" => id, "thing" => thing} = captures, conv) do
-    %{ conv | path: "/#{thing}/#{id}" }       
+   defp page(filename) do
+    @pages_path
+    |> Path.join(filename <> ".html")
+    |> File.read
    end
 
-   defp rewrite_path_captures(nil, conv), do: conv
+   def route(%Conv{method: "GET", path: "/about"} = conv) do
+    page("about")
+    |> handle_file(conv)
+   end
 
-   def route(%{method: "GET", path: "/wildthings"} = conv) do
+   def route(%Conv{method: "GET", path: "/bears/new"} = conv) do
+    page("form")
+    |> handle_file(conv)
+   end
+
+   def route(%Conv{method: "GET", path: "/pages/" <> file} = conv) do
+    page(file)
+    |> handle_file(conv)
+   end
+
+   def route(%Conv{method: "GET", path: "/wildthings"} = conv) do
     %{ conv | status: 200, resp_body: "Bears, Lions, Tigers" }
    end
 
-   def route(%{method: "GET", path: "/bears"} = conv) do
+   def route(%Conv{method: "GET", path: "/bears"} = conv) do
     %{ conv | status: 200, resp_body: "Teddy, Smokey, Paddington" }
    end
 
-   def route(%{method: "GET", path: "/bears/" <> id} = conv) do
-       %{ conv | status: 200, resp_body: "Bear #{id}" }
+   def route(%Conv{method: "GET", path: "/bears/" <> id} = conv) do
+    %{ conv | status: 200, resp_body: "Bear #{id}" }
    end
 
-   def route(%{method: "DELETE", path: "/bears/" <> _id} = conv) do
-       %{ conv | status: 403, resp_body: "Deleting a bear is forbidden" }
+   def route(%Conv{method: "DELETE", path: "/bears/" <> _id} = conv) do
+    %{ conv | status: 403, resp_body: "Deleting a bear is forbidden" }
    end
 
-   def route(%{method: _method, path: path} = conv) do
+   def route(%Conv{method: _method, path: path} = conv) do
     %{ conv | status: 404, resp_body: "No #{path} here!"}
    end
 
-   defp status_reason(code) do
-       %{
-           200 => "OK",
-           201 => "Created",
-           401 => "Unauthorized",
-           403 => "Forbidden",
-           404 => "Not Found",
-           500 => "Internal Server Error"
-       }[code]
-   end
-
-   def emojify(%{status: 200, resp_body: resp_body} = conv) do
-    %{ conv | resp_body: ";) #{resp_body} :)"}
-   end
-
-   def emojify(conv), do: conv
-
-   def format_response(conv) do
+   def format_response(%Conv{} = conv) do
     """
-    HTTP/1.1 #{conv.status} #{status_reason conv.status}
+    HTTP/1.1 #{full_status(conv)}
     Content-Type: text/html
     Content-Length: #{byte_size conv.resp_body}
 
@@ -144,6 +116,39 @@ IO.puts respose
 
 request = """
 GET /bears?id=1 HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+respose = Servy.Handler.handle(request)
+IO.puts respose
+
+request = """
+GET /about HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+respose = Servy.Handler.handle(request)
+IO.puts respose
+
+request = """
+GET /bears/new HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+respose = Servy.Handler.handle(request)
+IO.puts respose
+
+request = """
+GET /pages/form HTTP/1.1
 Host: example.com
 User-Agent: ExampleBrowser/1.0
 Accept: */*
