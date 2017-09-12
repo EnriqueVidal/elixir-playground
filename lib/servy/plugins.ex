@@ -8,8 +8,8 @@ defmodule Servy.Plugins do
         conv
     end
 
-    def track(%Conv{} = conv) do
-        Logger.info "#{conv.method}: #{conv.path}"
+    def track(%Conv{ method: method, path: path} = conv) do
+        Logger.info "#{method}: #{path}"
         conv
     end
 
