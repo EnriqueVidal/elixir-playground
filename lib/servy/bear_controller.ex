@@ -30,4 +30,8 @@ defmodule Servy.BearController do
             resp_body: "Create a #{type} bear named #{name}" 
         }
     end
+
+    def destroy(conv) do
+        %{ conv | status: 403, resp_body: "Deleting a bear is forbidden" }
+    end
 end
