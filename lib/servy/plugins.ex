@@ -4,12 +4,18 @@ defmodule Servy.Plugins do
     require Logger
 
     def track(%Conv{status: 404, path: path} = conv) do
-        Logger.warn "#{path} is on the loose!"
+        if Mix.env != :test do
+            Logger.warn "#{path} is on the loose!"
+        end
+
         conv
     end
 
     def track(%Conv{ method: method, path: path} = conv) do
-        Logger.info "#{method}: #{path}"
+        if Mix.env != :test do
+            Logger.info "#{method}: #{path}"
+        end
+
         conv
     end
 
