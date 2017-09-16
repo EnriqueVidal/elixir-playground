@@ -4,6 +4,7 @@ defmodule Servy.Conv do
               path: "",
               params: %{},
               resp_body: "",
+              resp_content_type: "text/html",
               status: nil
 
     defp status_reason(code) do
